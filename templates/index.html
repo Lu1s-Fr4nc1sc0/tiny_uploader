@@ -1,0 +1,101 @@
+<!-- <!doctype html> -->
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Arquivos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        header {
+            background: #6200ea;
+            color: #fff;
+            padding: 5vw 10vh;
+            text-align: center;
+        }
+        h1, h2 {
+            margin: 0;
+        }
+        main {
+            padding: 5vh;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            background: #fff;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        a {
+            color: #6200ea;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        form {
+            margin-top: 20px;
+        }
+        input[type="file"] {
+            margin-right: 10px;
+        }
+        button {
+            background: #6200ea;
+            color: #fff;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #3700b3;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Gerenciador de Arquivos</h1>
+    </header>
+    <main>
+        <h2>Upload de Arquivos</h2>
+        <form method="POST" action="/upload" enctype="multipart/form-data">
+            <input type="file" name="file" required>
+            <button type="submit">Enviar</button>
+        </form>
+
+        <h2>Arquivos Disponíveis</h2>
+        <ul>
+            {% for ext, files in grouped_files.items() %}
+            <h3>Tipo: {{ ext }}</h3>
+            <ul>
+                {% for file in files %}
+                    <li>
+                        <strong>{{ file.name }}</strong>
+                        <form method="POST" action="/delete/{{ file.name }}" style="display:inline;">
+                            <button type="submit">Deletar</button>
+                        </form>
+                        <form method="POST" action="/add_description" style="display:inline;">
+                            <input type="hidden" name="filename" value="{{ file.name }}">
+                            <input type="text" name="description" placeholder="Descrição" value="{{ file.description }}">
+                            <button type="submit">Salvar</button>
+                        </form>
+                        <a href="{{ url_for('download_file', filename=file.name) }}">Download</a>
+                    </li>
+                {% endfor %}
+        </ul>
+        {% endfor %}
+    </main>
+</body>
+</html>
