@@ -14,11 +14,11 @@ ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg',
                       'csv','iso','rar','odf','odt',
                       'word','rtf','doc','docx','dotx',
                       'xls','xlsx','ppt','pptx','htm','html',
-                      'tar.gz','mkv','sh','zsh'}
+                      'tar.gz','mkv','sh','zsh','js'}
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(DATA_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024 * 1024  # 1 GB
+app.config['MAX_CONTENT_LENGTH'] = 1 * (1024**3)  # 1 GB
 
 # Arquivo para armazenar descrições
 DESCRIPTIONS_FILE = os.path.join(DATA_FOLDER, 'descriptions.json')
@@ -32,116 +32,72 @@ if not os.path.exists(DESCRIPTIONS_FILE):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Função para carregar descrições
+## Carregar ou criar o arquivo de descrições
+if not os.path.exists(DESCRIPTIONS_FILE):
+    with open(DESCRIPTIONS_FILE, 'w') as f:
+        json.dump({}, f)
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+
 def load_descriptions():
-    # Verifica se o arquivo existe e tenta carregá-lo
-    if not os.path.exists(DESCRIPTIONS_FILE):
-        # Cria um arquivo vazio, se não existir
-        with open(DESCRIPTIONS_FILE, 'w') as f:
-            json.dump({}, f)
-        return {}
-
-    # Tenta carregar o JSON existente
-    try:
-        with open(DESCRIPTIONS_FILE, 'r') as f:
-            return json.load(f)
-    except json.JSONDecodeError:
-        # Se houver erro no JSON, recria um arquivo vazio
-        with open(DESCRIPTIONS_FILE, 'w') as f:
-            json.dump({}, f)
-        return {}
+    """Carrega descrições do arquivo JSON."""
+    with open(DESCRIPTIONS_FILE, 'r') as f:
+        return json.load(f)
 
 
-# Função para salvar descrições
 def save_descriptions(data):
-    try:
-        with open(DESCRIPTIONS_FILE, 'w') as f:
-            json.dump(data, f, indent=4)
-    except Exception as e:
-        # Apenas para depuração, não exiba isso ao usuário final em produção
-        print(f"Erro ao salvar o JSON: {e}")
+    """Salva descrições no arquivo JSON."""
+    with open(DESCRIPTIONS_FILE, 'w') as f:
+        json.dump(data, f, indent=4)
 
 
 @app.route('/')
 def index():
-    # Lista os arquivos no diretório
     files = os.listdir(app.config['UPLOAD_FOLDER'])
     descriptions = load_descriptions()
-    
-    # Organiza os arquivos por extensão
-    grouped_files = {}
-    for file in files:
-        ext = file.rsplit('.', 1)[1].lower() if '.' in file else 'unknown'
-        grouped_files.setdefault(ext, []).append({
-            'name': file,
-            'description': descriptions.get(file, '')
-        })
-    
-    return render_template('index.html', grouped_files=grouped_files)
+    return render_template('index.html',files=files,descriptions=descriptions,extensions=ALLOWED_EXTENSIONS)
 
-@app.route('/download/<filename>')
-def download_file(filename):
-    try:
-        return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
-    except FileNotFoundError:
-        flash('Arquivo não encontrado.')
-        return redirect(url_for('index'))
 
-@app.route('/upload', methods=['POST'])
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
-        flash('Nenhum arquivo enviado.')
-        return redirect(url_for('index'))
-
+        return "Nenhum arquivo enviado", 400
     file = request.files['file']
     if file.filename == '':
-        flash('Nenhum arquivo selecionado.')
-        return redirect(url_for('index'))
-
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        
-        # Salva o arquivo diretamente no disco, sem carregar tudo na memória
-        with open(filepath, 'wb') as f:
-            f.write(file.read())
-        
-        flash(f'Arquivo {filename} enviado com sucesso!')
-        return redirect(url_for('index'))
-
-    flash('Tipo de arquivo não permitido.')
+        return "Nenhum arquivo selecionado", 400
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+    file.save(filepath)
     return redirect(url_for('index'))
 
 
 @app.route('/delete/<filename>', methods=['POST'])
 def delete_file(filename):
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    descriptions = load_descriptions()
-
-    # Remove o arquivo e sua descrição
     if os.path.exists(filepath):
         os.remove(filepath)
-        descriptions.pop(filename, None)
-        save_descriptions(descriptions)
-        flash(f'Arquivo {filename} deletado com sucesso!')
-    else:
-        flash(f'Arquivo {filename} não encontrado.')
-    return redirect(url_for('index'))
-
-@app.route('/add_description', methods=['POST'])
-def add_description():
-    filename = request.form.get('filename')
-    description = request.form.get('description', '').strip()
-
-    if filename:
+        # Remove a descrição associada ao arquivo
         descriptions = load_descriptions()
-        descriptions[filename] = description
-        save_descriptions(descriptions)
-        flash(f'Descrição para {filename} atualizada com sucesso!')
-    else:
-        flash('Arquivo não encontrado.')
+        if filename in descriptions:
+            del descriptions[filename]
+            save_descriptions(descriptions)
+        return redirect(url_for('index'))
+    return "Arquivo não encontrado", 404
+
+
+@app.route('/description/<filename>', methods=['POST'])
+def add_description(filename):
+    descriptions = load_descriptions()
+    description = request.form.get('description', '').strip()
+    descriptions[filename] = description
+    save_descriptions(descriptions)
     return redirect(url_for('index'))
+
+
+@app.route('/download/<filename>')
+def download_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename,as_attachment=True)
+
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)

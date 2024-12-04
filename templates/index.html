@@ -1,5 +1,5 @@
-<!-- <!doctype html> -->
-<html lang="pt-br">
+<!doctype html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,63 +9,69 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f9;
-            color: #333;
+            background-color: #f7f3e9;
+            color: #4b3b2b;
         }
+
         header {
-            background: #6200ea;
+            background: #8c6f56;
             color: #fff;
-            padding: 2vh 1vw;
+            padding: 20px;
             text-align: center;
         }
-        h1, h2 {
-            margin: 0;
-        }
+
         main {
-            padding: 5vh;
+            padding: 20px;
+            max-width: 900px;
+            margin: 0 auto;
         }
+
         ul {
             list-style: none;
             padding: 0;
         }
+
         li {
             background: #fff;
-            margin: 10vw 0;
-            padding: 1vh;
-            border-radius: 0.5vw;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2vh 5vw rgba(0, 0, 0, 0.1);
+            flex-wrap: wrap;
         }
-        a {
-            color: #6200ea;
-            text-decoration: none;
+
+        .actions {
+            display: flex;
+            gap: 10px;
         }
-        a:hover {
-            text-decoration: underline;
-        }
-        form {
-            margin-top: 20px;
-        }
-        input[type="file"] {
-            margin-right: 10px;
-        }
-        button {
-            background: #6200ea;
+
+        button, a {
+            background: #8c6f56;
             color: #fff;
             border: none;
-            padding: 10px 15px;
+            padding: 5px 10px;
+            text-decoration: none;
             border-radius: 5px;
             cursor: pointer;
         }
-        button:hover {
-            background: #3700b3;
+
+        button:hover, a:hover {
+            background: #5e4630;
+        }
+
+        .filter {
+            margin-bottom: 20px;
+        }
+
+        .filter label {
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <header>fla
+    <header>
         <h1>Gerenciador de Arquivos</h1>
     </header>
     <main>
@@ -75,27 +81,45 @@
             <button type="submit">Enviar</button>
         </form>
 
+        <div class="filter">
+            <label for="file-type">Filtrar por extensão:</label>
+            <select id="file-type" onchange="filterFiles()">
+                <option value="all">Todos</option>
+                {% for ext in extensions %}
+					<option value="{{ ext }}">{{ ext.upper() }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
         <h2>Arquivos Disponíveis</h2>
-        <ul>
-            {% for ext, files in grouped_files.items() %}
-            <ul>
-                {% for file in files %}
-                    <li>
-                        <strong>{{ file.name }}</strong>
-                        <h3>Tipo: {{ ext }}</h3>
-                        <form method="POST" action="/delete/{{ file.name }}" style="display:inline;">
+        <ul id="file-list">
+            {% for file in files %}
+                <li data-ext="{{ file.split('.')[-1] }}">
+                    <span>{{ file }}</span>
+                    <div class="actions">
+                        <a href="{{ url_for('download_file', filename=file) }}">Download</a>
+                        <form method="POST" action="/delete/{{ file }}" style="display: inline;">
                             <button type="submit">Deletar</button>
                         </form>
-                        <form method="POST" action="/add_description" style="display:inline;">
-                            <input type="hidden" name="filename" value="{{ file.name }}">
-                            <input type="text" name="description" placeholder="Descrição" value="{{ file.description }}">
-                            <button type="submit">Salvar</button>
-                        </form>
-                        <a href="{{ url_for('download_file', filename=file.name) }}">Download</a>
-                    </li>
-                {% endfor %}
+                    </div>
+                    <form method="POST" action="/description/{{ file }}">
+                        <input type="text" name="description" value="{{ descriptions.get(file, '') }}" placeholder="Adicionar descrição">
+                        <button type="submit">Salvar</button>
+                    </form>
+                </li>
+            {% endfor %}
         </ul>
-        {% endfor %}
     </main>
+
+    <script>
+        function filterFiles() {
+            const filter = document.getElementById('file-type').value;
+            const files = document.querySelectorAll('#file-list li');
+            files.forEach(file => {
+                const ext = file.getAttribute('data-ext');
+                file.style.display = (filter === 'all' || ext === filter) ? 'flex' : 'none';
+            });
+        }
+    </script>
 </body>
 </html>
