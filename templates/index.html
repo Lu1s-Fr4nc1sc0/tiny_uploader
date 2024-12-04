@@ -15,7 +15,7 @@
         header {
             background: #6200ea;
             color: #fff;
-            padding: 5vw 10vh;
+            padding: 2vh 1vw;
             text-align: center;
         }
         h1, h2 {
@@ -30,13 +30,13 @@
         }
         li {
             background: #fff;
-            margin: 10px 0;
-            padding: 15px;
-            border-radius: 8px;
+            margin: 10vw 0;
+            padding: 1vh;
+            border-radius: 0.5vw;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2vh 5vw rgba(0, 0, 0, 0.1);
         }
         a {
             color: #6200ea;
@@ -65,7 +65,7 @@
     </style>
 </head>
 <body>
-    <header>
+    <header>fla
         <h1>Gerenciador de Arquivos</h1>
     </header>
     <main>
@@ -78,11 +78,11 @@
         <h2>Arquivos Disponíveis</h2>
         <ul>
             {% for ext, files in grouped_files.items() %}
-            <h3>Tipo: {{ ext }}</h3>
             <ul>
                 {% for file in files %}
                     <li>
                         <strong>{{ file.name }}</strong>
+                        <h3>Tipo: {{ ext }}</h3>
                         <form method="POST" action="/delete/{{ file.name }}" style="display:inline;">
                             <button type="submit">Deletar</button>
                         </form>
